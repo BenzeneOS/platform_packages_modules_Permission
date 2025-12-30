@@ -492,6 +492,8 @@
             <permission name="android.permission.ALLOW_SLIPPERY_TOUCHES" minSdkVersion="33" optionalMinSdkVersion="30" />
             <permission name="android.permission.RECEIVE_SENSITIVE_NOTIFICATIONS" minSdkVersion="35" />
             <permission name="android.permission.LOCK_APPS" featureFlag="android.security.Flags.appLockApis" />
+            <!-- For double-tap-to-sleep on home screen -->
+            <permission name="android.permission.DEVICE_POWER" />
         </permissions>
         <app-ops>
             <app-op name="android:receive_sensitive_notifications" mode="allowed" minSdkVersion="35"/>
