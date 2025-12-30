@@ -66,6 +66,7 @@ class PrivacyControlsViewModel(private val app: Application) : AndroidViewModel(
         CAMERA("privacy_camera_toggle", R.string.camera_toggle_title),
         LOCATION("privacy_location_access", R.string.location_settings),
         CLIPBOARD("show_clip_access_notification", R.string.show_clip_access_notification_title),
+        CLIPBOARD_AUTO_CLEAR("clipboard_auto_clear", R.string.clipboard_auto_clear_title),
         SHOW_PASSWORD("show_password", R.string.show_password_title);
 
         companion object {
@@ -96,6 +97,8 @@ class PrivacyControlsViewModel(private val app: Application) : AndroidViewModel(
                     )
                 shownPrefs[Pref.CLIPBOARD] =
                     PrefState(visible = true, checked = isClipboardEnabled(), admin = null)
+                shownPrefs[Pref.CLIPBOARD_AUTO_CLEAR] =
+                    PrefState(visible = true, checked = isClipboardAutoClearEnabled(), admin = null)
                 shownPrefs[Pref.SHOW_PASSWORD] =
                     PrefState(
                         visible = shouldDisplayShowPasswordToggle(),
@@ -128,6 +131,7 @@ class PrivacyControlsViewModel(private val app: Application) : AndroidViewModel(
             Pref.CAMERA -> toggleSensorOrShowAdmin(fragment, Sensors.CAMERA, admin)
             Pref.LOCATION -> goToLocation(fragment)
             Pref.CLIPBOARD -> toggleClipboard()
+            Pref.CLIPBOARD_AUTO_CLEAR -> toggleClipboardAutoClear()
             Pref.SHOW_PASSWORD -> toggleShowPassword()
         }
     }
@@ -200,6 +204,38 @@ class PrivacyControlsViewModel(private val app: Application) : AndroidViewModel(
             CONFIG_CLIPBOARD_SHOW_ACCESS_NOTIFICATIONS,
             newState
         )
+    }
+
+    private fun isClipboardAutoClearEnabled(): Boolean {
+        return Settings.Global.getInt(app.contentResolver, "clipboard_auto_clear_enabled", 1) != 0
+    }
+
+    private fun toggleClipboardAutoClear() {
+        Settings.Global.putInt(
+            app.contentResolver,
+            "clipboard_auto_clear_enabled",
+            if (isClipboardAutoClearEnabled()) 0 else 1
+        )
+        controlStateLiveData.update()
+    }
+
+    fun getClipboardAutoClearTimeout(): Long {
+        return Settings.Global.getLong(app.contentResolver, "clipboard_auto_clear_timeout", 3600000L)
+    }
+
+    fun setClipboardAutoClearTimeout(timeoutMs: Long) {
+        Settings.Global.putLong(app.contentResolver, "clipboard_auto_clear_timeout", timeoutMs)
+    }
+
+    fun formatTimeout(timeoutMs: Long): String {
+        val seconds = timeoutMs / 1000
+        val minutes = seconds / 60
+        val hours = minutes / 60
+        return when {
+            hours > 0 -> if (hours == 1L) "1 hour" else "$hours hours"
+            minutes > 0 -> if (minutes == 1L) "1 minute" else "$minutes minutes"
+            else -> if (seconds == 1L) "1 second" else "$seconds seconds"
+        }
     }
 
     private fun isShowPasswordEnabled(): Boolean {
