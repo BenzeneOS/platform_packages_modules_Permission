@@ -16,11 +16,13 @@
 
 package com.android.permissioncontroller.safetycenter.ui;
 
+import android.app.AlertDialog;
 import android.os.Build;
 import android.os.Bundle;
 
 import androidx.annotation.RequiresApi;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 
 import com.android.permissioncontroller.R;
@@ -65,7 +67,11 @@ public final class PrivacyControlsFragment extends PreferenceFragmentCompat {
         setSwitchPreference(prefStates, Pref.MIC);
         setSwitchPreference(prefStates, Pref.CAMERA);
         setSwitchPreference(prefStates, Pref.CLIPBOARD);
+        setSwitchPreference(prefStates, Pref.CLIPBOARD_AUTO_CLEAR);
         setSwitchPreference(prefStates, Pref.SHOW_PASSWORD);
+
+        // Setup timeout preference
+        setupTimeoutPreference();
 
         findPreference(Pref.LOCATION.getKey())
                 .setOnPreferenceClickListener(
@@ -78,5 +84,53 @@ public final class PrivacyControlsFragment extends PreferenceFragmentCompat {
     private void setSwitchPreference(Map<Pref, PrefState> prefStates, Pref prefType) {
         ClickableDisabledSwitchPreference preference = findPreference(prefType.getKey());
         preference.setupState(prefStates.get(prefType), prefType, mViewModel, this);
+    }
+
+    private static final String TIMEOUT_KEY = "clipboard_auto_clear_timeout";
+    private static final String[] TIMEOUT_LABELS = {
+        "30 seconds", "1 minute", "2 minutes", "5 minutes", "10 minutes",
+        "30 minutes", "1 hour", "2 hours", "4 hours", "8 hours", "12 hours", "24 hours"
+    };
+    private static final long[] TIMEOUT_VALUES = {
+        30_000L, 60_000L, 120_000L, 300_000L, 600_000L,
+        1_800_000L, 3_600_000L, 7_200_000L, 14_400_000L, 28_800_000L, 43_200_000L, 86_400_000L
+    };
+
+    private void setupTimeoutPreference() {
+        Preference timeoutPref = findPreference(TIMEOUT_KEY);
+        if (timeoutPref == null) return;
+
+        // Set current value as summary
+        long currentTimeout = mViewModel.getClipboardAutoClearTimeout();
+        timeoutPref.setSummary(mViewModel.formatTimeout(currentTimeout));
+
+        timeoutPref.setOnPreferenceClickListener(v -> {
+            showTimeoutDialog();
+            return true;
+        });
+    }
+
+    private void showTimeoutDialog() {
+        long currentTimeout = mViewModel.getClipboardAutoClearTimeout();
+        int selectedIndex = 6; // Default to 1 hour
+        for (int i = 0; i < TIMEOUT_VALUES.length; i++) {
+            if (TIMEOUT_VALUES[i] == currentTimeout) {
+                selectedIndex = i;
+                break;
+            }
+        }
+
+        new AlertDialog.Builder(requireContext())
+            .setTitle(R.string.clipboard_auto_clear_timeout_title)
+            .setSingleChoiceItems(TIMEOUT_LABELS, selectedIndex, (dialog, which) -> {
+                mViewModel.setClipboardAutoClearTimeout(TIMEOUT_VALUES[which]);
+                Preference timeoutPref = findPreference(TIMEOUT_KEY);
+                if (timeoutPref != null) {
+                    timeoutPref.setSummary(TIMEOUT_LABELS[which]);
+                }
+                dialog.dismiss();
+            })
+            .setNegativeButton(android.R.string.cancel, null)
+            .show();
     }
 }
